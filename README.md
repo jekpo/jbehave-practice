@@ -1,4 +1,4 @@
-jbehave-practice
+jbehave-training
 ================
 
-JBehave Practice
+jBehave Training

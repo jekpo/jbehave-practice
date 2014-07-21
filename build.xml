@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<project xmlns:artifact="antlib:org.apache.maven.artifact.ant" name="jBehave Automation" basedir="." default="jbehave-automation">
+  <property name="story.name" value="*"/>
+  <property name="jbehave.timeout" value="30"/>
+  <property name="jbehave.thread_count" value="4"/>
+  <target name="init-pom" description="Initialize Maven POM">
+    <artifact:pom id="mypom" file="pom.xml"/>
+    <artifact:dependencies pathId="mydeps" pomRefId="mypom"/>
+  </target>
+  <target name="clean" description="Removes the build (target) directory from the file system">
+    <delete dir="target"/>
+  </target>
+  <target name="clean-jbehave" description="Removes previously compiled jBehave classes and resources">
+    <delete dir="target/test-classes"/>
+  </target>
+  <target name="compile-jbehave" depends="init-pom" description="Compile JBehave test classes">
+    <mkdir dir="target/test-classes"/>
+    <javac srcdir="src/main/java" destdir="target/test-classes" includeantruntime="false" classpathref="mydeps">
+      <compilerarg value="-Xlint"/>
+    </javac>
+    <copy todir="target/test-classes">
+      <fileset dir="src/main/resources/story"/>
+    </copy>
+  </target>
+  <target name="extract-jbehave-resources" description="Extract JBehave resources">
+    <artifact:dependencies pathId="jbehave.resources.classpath">
+      <dependency groupId="org.jbehave.site" artifactId="jbehave-site-resources" version="3.1.1" type="zip"/>
+      <dependency groupId="org.jbehave" artifactId="jbehave-core" version="3.6.7" classifier="resources" type="zip"/>
+    </artifact:dependencies>
+    <unzip src="${org.jbehave.site:jbehave-site-resources:zip}" dest="target/jbehave/view"/>
+    <unzip src="${org.jbehave:jbehave-core:zip:resources}" dest="target/jbehave/view"/>
+  </target>
+  <target name="run-jbehave" depends="compile-jbehave,extract-jbehave-resources" description="Run all JBehave tests">
+    <path id="cp">
+      <pathelement path="${toString:mydeps}"/>
+      <pathelement location="target/test-classes"/>
+    </path>
+    <taskdef resource="testngtasks">
+      <classpath refid="cp"/>
+    </taskdef>
+    <property name="jbehave.timeout" value="${jbehave.timeout}"/>
+    <property name="jbehave.thread_count" value="${jbehave.thread_count}"/>
+    <testng suitename="functional test suite" outputdir="target/jebahve-reports" parallel="methods" threadCount="${jbehave.thread_count}" classpathref="cp" dumpCommand="false" verbose="2" haltonfailure="true" haltonskipped="true">
+      <jvmarg value="-Xss2048k"/>
+      <classfileset dir="target/test-classes">
+        <include name="**/story/${story.name}*.class"/>
+      </classfileset>
+      <sysproperty key="jbehave.report_dir" value="jbehave"/>
+      <sysproperty key="story.name" value="${story.name}"/>
+    </testng>
+  </target>
+  <target name="jbehave-automation" description="Run all integration tests">
+    <parallel>
+      <sequential>
+        <antcall target="run-jbehave"/>
+      </sequential>
+    </parallel>
+  </target>
+</project>
